@@ -26,4 +26,9 @@ target_link_libraries (${libname}
 if (WIN32)
   install (FILES $<TARGET_PDB_FILE:${libname}> DESTINATION ${PDB_INSTALL_DIR} COMPONENT pdb OPTIONAL)
 endif()
-install (TARGETS ${libname} LIBRARY DESTINATION ${LIBRARY_INSTALL_DIR})
+install (
+  TARGETS ${libname}
+  RUNTIME DESTINATION ${LIBRARY_INSTALL_DIR} COMPONENT runtime
+  # don't install import library for now
+  # LIBRARY DESTINATION ${LIBRARY_INSTALL_DIR} COMPONENT runtime
+  )

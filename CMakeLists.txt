@@ -26,7 +26,7 @@ set(CPACK_GENERATOR "ZIP")
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 set(CPACK_COMPONENTS_GROUPING IGNORE)
 if (WIN32)
-    set(CPACK_COMPONENTS_ALL pdb Unspecified)
+#    set(CPACK_COMPONENTS_ALL pdb plugins runtime)
 endif (WIN32)
 set(CPACK_PACKAGE_VERSION ${GIT_DESCRIBE})
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -134,16 +134,16 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 if (NOT LIBRARY_INSTALL_DIR)
-  set(LIBRARY_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/"
-      CACHE PATH "Location to install libraries (e.g., libgstklv-1.0-0.so/dll)")
+  set(LIBRARY_INSTALL_DIR lib
+      CACHE PATH "Location relative to CMAKE_INSTALL_PREFIX to install libraries (e.g., libgstklv-1.0-0.so/dll)")
 endif ()
 if (NOT PLUGIN_INSTALL_DIR)
-  set(PLUGIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/gstreamer-1.0/"
-      CACHE PATH "Location to install plugins (e.g., libgstpylon.so/dll)")
+  set(PLUGIN_INSTALL_DIR lib/gstreamer-1.0
+      CACHE PATH "Location relative to CMAKE_INSTALL_PREFIX  to install plugins (e.g., libgstpylon.so/dll)")
 endif()
 if (WIN32 AND NOT PDB_INSTALL_DIR)
-  set(PDB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/gstreamer-1.0/"
-      CACHE PATH "Location to install PDB debug files (e.g., libgstpylon.pdb)")
+  set(PDB_INSTALL_DIR lib/gstreamer-1.0
+      CACHE PATH "Location relative to CMAKE_INSTALL_PREFIX  to install PDB debug files (e.g., libgstpylon.pdb)")
 endif()
 
 add_subdirectory(gst-libs)
