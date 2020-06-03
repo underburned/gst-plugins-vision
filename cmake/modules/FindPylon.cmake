@@ -37,7 +37,8 @@ find_path (PYLON_INCLUDE_DIR pylonc/PylonC.h
 find_library (_PylonCLib NAMES PylonC_MD_VC120 pylonc
     PATHS
     "${PYLON_DIR}/Development/lib/x64"
-    "${PYLON_DIR}/lib64")
+    "${PYLON_DIR}/lib64"
+    "${PYLON_DIR}/lib")
 
 set (PYLON_LIBRARIES ${_PylonCLib})
 
