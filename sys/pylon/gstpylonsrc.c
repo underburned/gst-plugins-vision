@@ -137,7 +137,14 @@ enum
   PROP_TRANSFORMATION12,
   PROP_TRANSFORMATION20,
   PROP_TRANSFORMATION21,
-  PROP_TRANSFORMATION22
+  PROP_TRANSFORMATION22,
+  PROP_FAILRATE,
+  PROP_GRABTIMEOUT,
+  PROP_PACKETSIZE,
+  PROP_INTERPACKETDELAY,
+  PROP_FRAMETRANSDELAY,
+  PROP_BANDWIDTHRESERVE,
+  PROP_BANDWIDTHRESERVEACC
 };
 
 #define DEFAULT_PROP_PIXEL_FORMAT "auto"
@@ -482,6 +489,41 @@ gst_pylonsrc_class_init (GstPylonSrcClass * klass)
           "(RGBRGB, RGBYUV, YUVRGB) Sets the type of color transformation done by the color transformation selectors.",
           "RGBRGB",
           (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+  g_object_class_install_property (gobject_class, PROP_FAILRATE,
+      g_param_spec_int ("failrate", "Failed frames",
+          "Specifies the number of consecutive frames to fail before failing everything.",
+          0, 1000, 10,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+    g_object_class_install_property (gobject_class, PROP_GRABTIMEOUT,
+      g_param_spec_int ("grabtimeout", "Initial load timeout",
+          "Specifies the number of miiliseconds to wait for frame to be grabed from the camera.",
+          0, 60000, 1000,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+    g_object_class_install_property (gobject_class, PROP_PACKETSIZE,
+      g_param_spec_int ("packetsize", "Maximum size of data packet",
+          "The packetsize parameter specifies the maximum size of a data packet transmitted via Ethernet. The value is in bytes. Default value 0 -> Use camera defaults",
+          0, 16404, 0,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS))); //TODO: Limits may be co-dependent on other transport layer parameters.
+      g_object_class_install_property (gobject_class, PROP_INTERPACKETDELAY,
+      g_param_spec_int ("interpacketdelay", "Inter-Packet Delay between packet transmissions",
+          "If your network hardware can't handle the incoming packet rate, it is useful to increase the delay between packet transmissions.  Default value -1 -> Use camera defaults",
+          -1, 273331, -1,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS))); //TODO: Limits may be co-dependent on other transport layer parameters
+      g_object_class_install_property (gobject_class, PROP_FRAMETRANSDELAY,
+      g_param_spec_int ("frametransdelay", "Delay for begin transmitting frame.",
+          "Sets a delay in ticks between when camera begisn transmitting frame afther acquiring it. By default, one tick equals 8 ns. With PTP enabled, one tick equals 1 ns.  Default value -1 -> Use camera defaults",
+          -1, 50000000, -1,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS))); //TODO: Limits may be co-dependent on other transport layer parameters
+      g_object_class_install_property (gobject_class, PROP_BANDWIDTHRESERVE,
+      g_param_spec_int ("bandwidthreserve", "Portion of bandwidth reserved for packet resends.",
+          "The setting is expressed as a percentage of the assigned bandwidth.",
+          -1, 200, -1,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS))); //TODO: Limits may be co-dependent on other transport layer parameters
+      g_object_class_install_property (gobject_class, PROP_BANDWIDTHRESERVEACC,
+      g_param_spec_int ("bandwidthreserveacc", "Pool of resends for unusual situations",
+          "For situations when the network connection becomes unstable. A larger number of packet resends may be needed to transmit an image.  Default value 0 -> Use camera defaults",
+          0, 200, 0,
+          (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));//TODO: Limits may be co-dependent on other transport layer parameters    
 }
 
 static gboolean
@@ -564,6 +606,11 @@ gst_pylonsrc_init (GstPylonSrc * src)
   src->transformation20 = 999.0;
   src->transformation21 = 999.0;
   src->transformation22 = 999.0;
+  src->failrate = 10;
+  src->grabtimeout = 1000;
+  src->packetSize = 0;
+  src->interPacketDelay = -1;
+  src->frameTransDelay = -1;
 
   // Mark this element as a live source (disable preroll)
   gst_base_src_set_live (GST_BASE_SRC (src), TRUE);
@@ -771,6 +818,27 @@ gst_pylonsrc_set_property (GObject * object, guint property_id,
     case PROP_TRANSFORMATION22:
       src->transformation22 = g_value_get_double (value);
       break;
+    case PROP_FAILRATE:
+      src->failrate = g_value_get_int (value);
+      break;
+    case PROP_GRABTIMEOUT:
+      src->grabtimeout = g_value_get_int (value);
+      break;
+    case PROP_PACKETSIZE:
+      src->packetSize = g_value_get_int (value);
+      break;
+    case PROP_INTERPACKETDELAY:
+      src->interPacketDelay = g_value_get_int (value);
+      break;
+    case PROP_FRAMETRANSDELAY:
+      src->frameTransDelay = g_value_get_int (value);
+      break;
+    case PROP_BANDWIDTHRESERVE:
+      src->bandwidthReserve = g_value_get_int (value);
+      break;
+    case PROP_BANDWIDTHRESERVEACC:
+      src->bandwidthReserveAcc = g_value_get_int (value);
+      break;  
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -973,6 +1041,27 @@ gst_pylonsrc_get_property (GObject * object, guint property_id,
       break;
     case PROP_TRANSFORMATION22:
       g_value_set_double (value, src->transformation22);
+      break;
+    case PROP_FAILRATE:
+      g_value_set_int (value, src->failrate);
+      break;
+    case PROP_GRABTIMEOUT:
+      g_value_set_int (value, src->grabtimeout);
+      break;
+    case PROP_PACKETSIZE:
+      g_value_set_int (value, src->packetSize);
+      break;
+    case PROP_INTERPACKETDELAY:
+      g_value_set_int (value, src->interPacketDelay);
+      break;
+    case PROP_FRAMETRANSDELAY:
+      g_value_set_int (value, src->frameTransDelay);
+      break;
+    case PROP_BANDWIDTHRESERVE:
+      g_value_set_int (value, src->bandwidthReserve);
+      break;
+    case PROP_BANDWIDTHRESERVEACC:
+      g_value_set_int (value, src->bandwidthReserveAcc);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -2525,6 +2614,120 @@ error:
   return FALSE;
 }
 
+static gboolean gst_pylonsrc_set_packetsize (GstPylonSrc * src)
+{
+ GENAPIC_RESULT res;
+
+  if (src->packetSize != 0) {
+    if (FEATURE_SUPPORTED ("GevSCPSPacketSize")) {
+      GST_DEBUG_OBJECT (src, "Setting packetsize to %d", src->packetSize);
+      res = PylonDeviceSetIntegerFeature (src->deviceHandle,"GevSCPSPacketSize", src->packetSize);
+      PYLONC_CHECK_ERROR (src, res);
+    }
+    else{
+      GST_ERROR_OBJECT (src,"This camera doesn't support changin packetsize.");
+      goto error;
+    }
+  } else {
+      GST_DEBUG_OBJECT (src, "Using camera default packetSize");
+  }
+  return TRUE;
+
+error:
+  return FALSE;  
+}
+
+static gboolean gst_pylonsrc_set_interPacketDelay (GstPylonSrc * src)
+{
+ GENAPIC_RESULT res;
+
+  if (src->interPacketDelay >= 0 ) {
+    if (FEATURE_SUPPORTED ("GevSCPD")) {
+      GST_DEBUG_OBJECT (src, "Setting interPacketDelay to %d", src->interPacketDelay);
+      res = PylonDeviceSetIntegerFeature (src->deviceHandle,"GevSCPD", src->interPacketDelay);
+      PYLONC_CHECK_ERROR (src, res);
+    }
+    else{
+      GST_ERROR_OBJECT (src,"This camera doesn't support changin interPacketDelay.");
+      goto error;
+    }
+  } else {
+      GST_DEBUG_OBJECT (src, "Using camera default interPacketDelay");
+  }
+  return TRUE;
+
+error:
+  return FALSE;  
+}
+
+static gboolean gst_pylonsrc_set_frameTransDelay (GstPylonSrc * src)
+{
+ GENAPIC_RESULT res;
+
+  if (src->frameTransDelay >= 0 ) {
+    if (FEATURE_SUPPORTED ("GevSCFTD")) {
+      GST_DEBUG_OBJECT (src, "Setting frameTransDelay to %d", src->frameTransDelay);
+      res = PylonDeviceSetIntegerFeature (src->deviceHandle,"GevSCFTD", src->frameTransDelay);
+      PYLONC_CHECK_ERROR (src, res);
+    }
+    else{
+      GST_ERROR_OBJECT (src,"This camera doesn't support changin frameTransDelay.");
+      goto error;
+    }
+  } else {
+      GST_DEBUG_OBJECT (src, "Using camera default frameTransDelay");
+  }
+  return TRUE;
+
+error:
+  return FALSE;  
+}
+
+static gboolean gst_pylonsrc_set_bandwidthReserve (GstPylonSrc * src)
+{
+ GENAPIC_RESULT res;
+
+  if (src->bandwidthReserve >= 0 ) {
+    if (FEATURE_SUPPORTED ("GevSCBWR")) {
+      GST_DEBUG_OBJECT (src, "Setting bandwidthReserve to %d", src->bandwidthReserve);
+      res = PylonDeviceSetIntegerFeature (src->deviceHandle,"GevSCBWR", src->bandwidthReserve);
+      PYLONC_CHECK_ERROR (src, res);
+    }
+    else{
+      GST_ERROR_OBJECT (src,"This camera doesn't support changin bandwidthReserve.");
+      goto error;
+    }
+  } else {
+      GST_DEBUG_OBJECT (src, "Using camera default bandwidthReserve");
+  }
+  return TRUE;
+
+error:
+  return FALSE;  
+}
+
+static gboolean gst_pylonsrc_set_bandwidthReserveAcc (GstPylonSrc * src)
+{
+ GENAPIC_RESULT res;
+
+  if (src->bandwidthReserveAcc > 0 ) {
+    if (FEATURE_SUPPORTED ("GevSCBWR")) {
+      GST_DEBUG_OBJECT (src, "Setting bandwidthReserveAcc to %d", src->bandwidthReserveAcc);
+      res = PylonDeviceSetIntegerFeature (src->deviceHandle,"GevSCBWR", src->bandwidthReserveAcc);
+      PYLONC_CHECK_ERROR (src, res);
+    }
+    else{
+      GST_ERROR_OBJECT (src,"This camera doesn't support changin bandwidthReserveAcc.");
+      goto error;
+    }
+  } else {
+      GST_DEBUG_OBJECT (src, "Using camera default bandwidthReserveAcc");
+  }
+  return TRUE;
+
+error:
+  return FALSE;  
+}
 static gboolean
 gst_pylonsrc_configure_start_acquisition (GstPylonSrc * src)
 {
@@ -2536,14 +2739,20 @@ gst_pylonsrc_configure_start_acquisition (GstPylonSrc * src)
       !gst_pylonsrc_set_reverse (src) ||
       !gst_pylonsrc_set_pixel_format (src) ||
       !gst_pylonsrc_set_test_image (src) ||
+      !gst_pylonsrc_set_packetsize(src) ||
       !gst_pylonsrc_set_readout (src) ||
       !gst_pylonsrc_set_bandwidth (src) ||
       !gst_pylonsrc_set_framerate (src) ||
+      !gst_pylonsrc_set_frameTransDelay(src) ||
+      !gst_pylonsrc_set_bandwidthReserveAcc(src) ||
+      !gst_pylonsrc_set_bandwidthReserve(src) ||
+      !gst_pylonsrc_set_interPacketDelay(src) ||
       !gst_pylonsrc_set_lightsource (src) ||
       !gst_pylonsrc_set_auto_exp_gain_wb (src) ||
       !gst_pylonsrc_set_color (src) ||
       !gst_pylonsrc_set_exposure_gain_level (src) ||
-      !gst_pylonsrc_set_pgi (src) || !gst_pylonsrc_set_trigger (src))
+      !gst_pylonsrc_set_pgi (src) || 
+      !gst_pylonsrc_set_trigger (src))
     goto error;
 
   // Create a stream grabber
@@ -2684,6 +2893,7 @@ gst_pylonsrc_configure_start_acquisition (GstPylonSrc * src)
         PylonDeviceExecuteCommandFeature (src->deviceHandle, "TriggerSoftware");
     PYLONC_CHECK_ERROR (src, res);
   }
+  src->failedFrames = 0;
   src->frameNumber = 0;
 
   GST_DEBUG_OBJECT (src, "Initialised successfully.");
@@ -2756,8 +2966,8 @@ gst_pylonsrc_create (GstPushSrc * psrc, GstBuffer ** buf)
       goto error;
     src->acquisition_configured = TRUE;
   }
-  // Wait for the buffer to be filled  (up to 1 s)  
-  res = PylonWaitObjectWait (src->waitObject, 1000, &bufferReady);
+  // Wait for the buffer to be filled  (up to n ms). Can fail on large frames if timeout set too low.
+  res = PylonWaitObjectWait (src->waitObject, src->grabtimeout, &bufferReady);
   PYLONC_CHECK_ERROR (src, res);
   if (!bufferReady) {
     GST_ERROR_OBJECT (src,
@@ -2791,7 +3001,7 @@ gst_pylonsrc_create (GstPushSrc * psrc, GstBuffer ** buf)
     PYLONC_CHECK_ERROR (src, res);
   }
   // Process the current buffer
-  if (grabResult.Status == Grabbed) {
+  if (grabResult.Status == Grabbed || src->failedFrames < src->failrate) {
     VideoFrame *vf = (VideoFrame *) g_malloc0 (sizeof (VideoFrame));
 
     *buf =
@@ -2801,17 +3011,22 @@ gst_pylonsrc_create (GstPushSrc * psrc, GstBuffer ** buf)
 
     vf->buffer_handle = grabResult.hBuffer;
     vf->src = src;
+
+    if (grabResult.Status != Grabbed ){
+      src->failedFrames += 1;
+      GST_WARNING_OBJECT (src,"Failed capture count=%d. Status=%d, ErrorCode=%d",src->failedFrames,grabResult.Status, grabResult.ErrorCode);      
+    }
+    else src->failedFrames = 0;
   } else {
-    GST_ERROR_OBJECT (src, "Error in the image processing loop. Status=%d",
-        grabResult.Status);
-    goto error;
+      GST_ERROR_OBJECT (src, "Error in the image processing loop. Status=%d, ErrorCode=%d", grabResult.Status, grabResult.ErrorCode);
+      goto error;
   }
 
   // Set frame offset
   GST_BUFFER_OFFSET (*buf) = src->frameNumber;
   src->frameNumber += 1;
   GST_BUFFER_OFFSET_END (*buf) = src->frameNumber;
-
+  
   return GST_FLOW_OK;
 error:
   return GST_FLOW_ERROR;
