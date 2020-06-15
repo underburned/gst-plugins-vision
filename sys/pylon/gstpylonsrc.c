@@ -3104,6 +3104,9 @@ _Bool
 pylonc_connect_camera (GstPylonSrc * src)
 {
   GENAPIC_RESULT res;
+  NODEMAP_HANDLE hTlNodemap;
+  NODE_HANDLE hNode;
+  _Bool isWritable;
   GST_DEBUG_OBJECT (src, "Connecting to the camera (index=%d)...",
       src->cameraId);
 
@@ -3114,6 +3117,31 @@ pylonc_connect_camera (GstPylonSrc * src)
       PylonDeviceOpen (src->deviceHandle,
       PYLONC_ACCESS_MODE_CONTROL | PYLONC_ACCESS_MODE_STREAM);
   PYLONC_CHECK_ERROR (src, res);
+
+  /*
+   * Enable migration mode for SFNC 2.x camera devices
+   * Enabling this mode allows you to work with camera devices that are based on 
+   * different SFNC versions. For more information, see the C++ Programmer's 
+   * Guide and Reference Documentation delivered with the Basler pylon Camera Software Suite 
+   * ("Advanced Topics" -> "Migrating Existing Code for Using SFNC 2.x-Based Camera Devices").
+   */
+  // Retrieve the transport layer node map.
+  res = PylonDeviceGetTLNodeMap (src->deviceHandle, &hTlNodemap);
+  PYLONC_CHECK_ERROR (src, res);
+
+  // Find the migration mode enable node.
+  res = GenApiNodeMapGetNode (hTlNodemap, "MigrationModeEnable", &hNode);
+  PYLONC_CHECK_ERROR (src, res);
+
+  res = GenApiNodeIsWritable (hNode, &isWritable);
+  PYLONC_CHECK_ERROR (src, res);
+
+  if (isWritable) {
+    // Enable the migration mode if available and writable.
+    res = GenApiBooleanSetValue (hNode, 1);
+    PYLONC_CHECK_ERROR (src, res);
+    GST_LOG_OBJECT (src, "Migration mode is enabled.");
+  }
 
   src->deviceConnected = TRUE;
   return TRUE;
