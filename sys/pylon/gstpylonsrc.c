@@ -1013,7 +1013,7 @@ gst_pylonsrc_get_property (GObject * object, guint property_id,
       g_value_set_double (value, src->gainupperlimit);
       break;
     case PROP_AUTOBRIGHTNESSTARGET:
-      g_value_set_double (value, src->sharpnessenhancement);
+      g_value_set_double (value, src->brightnesstarget);
       break;
     case PROP_TRANSFORMATION00:
       g_value_set_double (value, src->transformation00);
