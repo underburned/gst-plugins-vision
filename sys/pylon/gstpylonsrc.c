@@ -1757,11 +1757,11 @@ gst_pylonsrc_set_framerate (GstPylonSrc * src)
 
       if (src->fps != 0
           && PylonDeviceFeatureIsAvailable (src->deviceHandle,
-              "AcquisitionFrameRate")) {
+              "AcquisitionFrameRateAbs")) {
         GST_DEBUG_OBJECT (src, "Capping framerate to %0.2lf.", src->fps);
         res =
             PylonDeviceSetFloatFeature (src->deviceHandle,
-            "AcquisitionFrameRate", src->fps);
+            "AcquisitionFrameRateAbs", src->fps);
         PYLONC_CHECK_ERROR (src, res);
       } else {
         GST_DEBUG_OBJECT (src,
@@ -1790,34 +1790,34 @@ gst_pylonsrc_set_lightsource (GstPylonSrc * src)
 {
   GENAPIC_RESULT res;
   // Set lightsource preset
-  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "LightSourcePreset")) {
+  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "LightSourceSelector")) {
     src->lightsource = g_ascii_strdown (src->lightsource, -1);
 
     if (strcmp (src->lightsource, "off") == 0) {
       GST_DEBUG_OBJECT (src, "Not using a lightsource preset.");
       res =
-          PylonDeviceFeatureFromString (src->deviceHandle, "LightSourcePreset",
+          PylonDeviceFeatureFromString (src->deviceHandle, "LightSourceSelector",
           "Off");
       PYLONC_CHECK_ERROR (src, res);
     } else if (strcmp (src->lightsource, "2800k") == 0) {
       GST_DEBUG_OBJECT (src,
           "Setting light preset to Tungsten 2800k (Incandescen light).");
       res =
-          PylonDeviceFeatureFromString (src->deviceHandle, "LightSourcePreset",
-          "Tungsten2800K");
+          PylonDeviceFeatureFromString (src->deviceHandle, "LightSourceSelector",
+          "Tungsten");
       PYLONC_CHECK_ERROR (src, res);
     } else if (strcmp (src->lightsource, "5000k") == 0) {
       GST_DEBUG_OBJECT (src,
           "Setting light preset to Daylight 5000k (Daylight).");
       res =
-          PylonDeviceFeatureFromString (src->deviceHandle, "LightSourcePreset",
-          "Daylight5000K");
+          PylonDeviceFeatureFromString (src->deviceHandle, "LightSourceSelector",
+          "Daylight");
       PYLONC_CHECK_ERROR (src, res);
     } else if (strcmp (src->lightsource, "6500k") == 0) {
       GST_DEBUG_OBJECT (src,
           "Setting light preset to Daylight 6500k (Very bright day).");
       res =
-          PylonDeviceFeatureFromString (src->deviceHandle, "LightSourcePreset",
+          PylonDeviceFeatureFromString (src->deviceHandle, "LightSourceSelector",
           "Daylight6500K");
       PYLONC_CHECK_ERROR (src, res);
     } else {
@@ -1949,10 +1949,10 @@ gst_pylonsrc_set_auto_exp_gain_wb (GstPylonSrc * src)
   // Configure automatic exposure and gain settings
   if (src->autoexposureupperlimit != 9999999.0) {
     if (PylonDeviceFeatureIsAvailable (src->deviceHandle,
-            "AutoExposureTimeUpperLimit")) {
+            "AutoExposureTimeAbsUpperLimit")) {
       res =
           PylonDeviceSetFloatFeature (src->deviceHandle,
-          "AutoExposureTimeUpperLimit", src->autoexposureupperlimit);
+          "AutoExposureTimeAbsUpperLimit", src->autoexposureupperlimit);
       PYLONC_CHECK_ERROR (src, res);
     } else {
       GST_WARNING_OBJECT (src,
@@ -1970,10 +1970,10 @@ gst_pylonsrc_set_auto_exp_gain_wb (GstPylonSrc * src)
     }
 
     if (PylonDeviceFeatureIsAvailable (src->deviceHandle,
-            "AutoExposureTimeLowerLimit")) {
+            "AutoExposureTimeAbsLowerLimit")) {
       res =
           PylonDeviceSetFloatFeature (src->deviceHandle,
-          "AutoExposureTimeLowerLimit", src->autoexposurelowerlimit);
+          "AutoExposureTimeAbsLowerLimit", src->autoexposurelowerlimit);
       PYLONC_CHECK_ERROR (src, res);
     } else {
       GST_WARNING_OBJECT (src,
@@ -1981,9 +1981,9 @@ gst_pylonsrc_set_auto_exp_gain_wb (GstPylonSrc * src)
     }
   }
   if (src->gainlowerlimit != 999.0) {
-    if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "AutoGainLowerLimit")) {
+    if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "AutoGainRawLowerLimit")) {
       res =
-          PylonDeviceSetFloatFeature (src->deviceHandle, "AutoGainLowerLimit",
+          PylonDeviceSetFloatFeature (src->deviceHandle, "AutoGainRawLowerLimit",
           src->gainlowerlimit);
       PYLONC_CHECK_ERROR (src, res);
     } else {
@@ -2001,9 +2001,9 @@ gst_pylonsrc_set_auto_exp_gain_wb (GstPylonSrc * src)
       goto error;
     }
 
-    if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "AutoGainUpperLimit")) {
+    if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "AutoGainRawUpperLimit")) {
       res =
-          PylonDeviceSetFloatFeature (src->deviceHandle, "AutoGainUpperLimit",
+          PylonDeviceSetFloatFeature (src->deviceHandle, "AutoGainRawUpperLimit",
           src->gainupperlimit);
       PYLONC_CHECK_ERROR (src, res);
     } else {
@@ -2013,9 +2013,9 @@ gst_pylonsrc_set_auto_exp_gain_wb (GstPylonSrc * src)
   }
   if (src->brightnesstarget != 999.0) {
     if (PylonDeviceFeatureIsAvailable (src->deviceHandle,
-            "AutoTargetBrightness")) {
+            "AutoTargetValue")) {
       res =
-          PylonDeviceSetFloatFeature (src->deviceHandle, "AutoTargetBrightness",
+          PylonDeviceSetFloatFeature (src->deviceHandle, "AutoTargetValue",
           src->brightnesstarget);
       PYLONC_CHECK_ERROR (src, res);
     } else {
@@ -2030,12 +2030,12 @@ gst_pylonsrc_set_auto_exp_gain_wb (GstPylonSrc * src)
     if (strcmp (src->autoprofile, "gain") == 0) {
       res =
           PylonDeviceFeatureFromString (src->deviceHandle,
-          "AutoFunctionProfile", "MinimizeGain");
+          "AutoFunctionProfile", "GainMinimum");
       PYLONC_CHECK_ERROR (src, res);
     } else if (strcmp (src->autoprofile, "exposure") == 0) {
       res =
           PylonDeviceFeatureFromString (src->deviceHandle,
-          "AutoFunctionProfile", "MinimizeExposureTime");
+          "AutoFunctionProfile", "ExposureMinimum");
       PYLONC_CHECK_ERROR (src, res);
     } else {
       GST_ERROR_OBJECT (src,
@@ -2062,7 +2062,7 @@ gst_pylonsrc_set_color (GstPylonSrc * src)
   GENAPIC_RESULT res;
 
   // Configure colour balance
-  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "BalanceRatio")) {
+  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "BalanceRatioAbs")) {
     if (strcmp (src->autowhitebalance, "off") == 0) {
       if (src->balancered != 999.0) {
         res =
@@ -2070,7 +2070,7 @@ gst_pylonsrc_set_color (GstPylonSrc * src)
             "BalanceRatioSelector", "Red");
         PYLONC_CHECK_ERROR (src, res);
         res =
-            PylonDeviceSetFloatFeature (src->deviceHandle, "BalanceRatio",
+            PylonDeviceSetFloatFeature (src->deviceHandle, "BalanceRatioAbs",
             src->balancered);
         PYLONC_CHECK_ERROR (src, res);
 
@@ -2085,7 +2085,7 @@ gst_pylonsrc_set_color (GstPylonSrc * src)
             "BalanceRatioSelector", "Green");
         PYLONC_CHECK_ERROR (src, res);
         res =
-            PylonDeviceSetFloatFeature (src->deviceHandle, "BalanceRatio",
+            PylonDeviceSetFloatFeature (src->deviceHandle, "BalanceRatioAbs",
             src->balancegreen);
         PYLONC_CHECK_ERROR (src, res);
 
@@ -2100,7 +2100,7 @@ gst_pylonsrc_set_color (GstPylonSrc * src)
             "BalanceRatioSelector", "Blue");
         PYLONC_CHECK_ERROR (src, res);
         res =
-            PylonDeviceSetFloatFeature (src->deviceHandle, "BalanceRatio",
+            PylonDeviceSetFloatFeature (src->deviceHandle, "BalanceRatioAbs",
             src->balanceblue);
         PYLONC_CHECK_ERROR (src, res);
 
@@ -2482,12 +2482,12 @@ gst_pylonsrc_set_exposure_gain_level (GstPylonSrc * src)
   GENAPIC_RESULT res;
 
   // Configure exposure
-  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "ExposureTime")) {
+  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "ExposureTimeAbs")) {
     if (strcmp (src->autoexposure, "off") == 0) {
       if (src->exposure != 0.0) {
         GST_DEBUG_OBJECT (src, "Setting exposure to %0.2lf", src->exposure);
         res =
-            PylonDeviceSetFloatFeature (src->deviceHandle, "ExposureTime",
+            PylonDeviceSetFloatFeature (src->deviceHandle, "ExposureTimeAbs",
             src->exposure);
         PYLONC_CHECK_ERROR (src, res);
       } else {
@@ -2504,10 +2504,10 @@ gst_pylonsrc_set_exposure_gain_level (GstPylonSrc * src)
   }
 
   // Configure gain
-  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "Gain")) {
+  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "GainAbs")) {
     if (strcmp (src->autogain, "off") == 0) {
       GST_DEBUG_OBJECT (src, "Setting gain to %0.2lf", src->gain);
-      res = PylonDeviceSetFloatFeature (src->deviceHandle, "Gain", src->gain);
+      res = PylonDeviceSetFloatFeature (src->deviceHandle, "GainAbs", src->gain);
       PYLONC_CHECK_ERROR (src, res);
     } else {
       GST_WARNING_OBJECT (src,
@@ -2519,10 +2519,10 @@ gst_pylonsrc_set_exposure_gain_level (GstPylonSrc * src)
   }
 
   // Configure black level
-  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "BlackLevel")) {
+  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "BlackLevelAbs")) {
     GST_DEBUG_OBJECT (src, "Setting black level to %0.2lf", src->blacklevel);
     res =
-        PylonDeviceSetFloatFeature (src->deviceHandle, "BlackLevel",
+        PylonDeviceSetFloatFeature (src->deviceHandle, "BlackLevelAbs",
         src->blacklevel);
     PYLONC_CHECK_ERROR (src, res);
   } else {
@@ -2531,6 +2531,15 @@ gst_pylonsrc_set_exposure_gain_level (GstPylonSrc * src)
   }
 
   // Configure gamma correction
+  if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "GammaEnable")) {
+    GST_DEBUG_OBJECT (src, "Enabling gamma");
+    res = PylonDeviceSetBooleanFeature (src->deviceHandle, "GammaEnable", 1);
+    PYLONC_CHECK_ERROR (src, res);
+    GST_DEBUG_OBJECT (src, "Set the gamma type to User");
+    res = PylonDeviceFeatureFromString (src->deviceHandle, "GammaSelector", "User");
+    PYLONC_CHECK_ERROR (src, res);
+  }
+  
   if (PylonDeviceFeatureIsAvailable (src->deviceHandle, "Gamma")) {
     GST_DEBUG_OBJECT (src, "Setting gamma to %0.2lf", src->gamma);
     res = PylonDeviceSetFloatFeature (src->deviceHandle, "Gamma", src->gamma);
@@ -2851,11 +2860,11 @@ gst_pylonsrc_configure_start_acquisition (GstPylonSrc * src)
   }
 
   // Output sensor readout time [us]
-  if (FEATURE_SUPPORTED ("SensorReadoutTime")) {
+  if (FEATURE_SUPPORTED ("ReadoutTimeAbs")) {
     double readoutTime = 0.0;
 
     res =
-        PylonDeviceGetFloatFeature (src->deviceHandle, "SensorReadoutTime",
+        PylonDeviceGetFloatFeature (src->deviceHandle, "ReadoutTimeAbs",
         &readoutTime);
     PYLONC_CHECK_ERROR (src, res);
 
@@ -2867,11 +2876,11 @@ gst_pylonsrc_configure_start_acquisition (GstPylonSrc * src)
   }
 
   // Output final frame rate [Hz]
-  if (FEATURE_SUPPORTED ("ResultingFrameRate")) {
+  if (FEATURE_SUPPORTED ("ResultingFrameRateAbs")) {
     double frameRate = 0.0;
 
     res =
-        PylonDeviceGetFloatFeature (src->deviceHandle, "ResultingFrameRate",
+        PylonDeviceGetFloatFeature (src->deviceHandle, "ResultingFrameRateAbs",
         &frameRate);
     PYLONC_CHECK_ERROR (src, res);
 
