@@ -1004,7 +1004,7 @@ gst_pylonsrc_get_property (GObject * object, guint property_id,
       g_value_set_double (value, src->autoexposureupperlimit);
       break;
     case PROP_AUTOEXPOSURELOWERLIMIT:
-      g_value_set_double (value, src->sharpnessenhancement);
+      g_value_set_double (value, src->autoexposurelowerlimit);
       break;
     case PROP_GAINLOWERLIMIT:
       g_value_set_double (value, src->sharpnessenhancement);
